@@ -11,6 +11,9 @@
 #include "include/merklecpp/merklecpp.h"
 #include <iostream>
 #include <fstream>
+#include <openssl/sha.h>
+#include <iomanip>
+#include <sstream>
 
 using Path = std::filesystem::path;
 using Hash = merkle::Hash;
@@ -107,14 +110,39 @@ static DiffAndTree detect_changed_file_paths(
 #include <filesystem>
 
 Hash get_content_hash(const std::filesystem::path& p) {
-  // temp fake hash: just hash the file size + name base64 trimmed to 16 chars
-  std::ifstream f(p, std::ios::binary | std::ios::ate);
-  auto size = f.tellg();
-  auto to_hash = p.filename().string() + std::to_string(size);
-  // trim to 32
-  if (to_hash.size() > 64) to_hash = to_hash.substr(0, 64);
-  if (to_hash.size() < 64) to_hash.append(64 - to_hash.size(), '0');
-  return Hash{to_hash};
+  // Use SHA256 to hash file content only (not filename) for proper move detection
+  std::ifstream file(p, std::ios::binary);
+  if (!file) {
+    // Return zero hash if file can't be read
+    return Hash{std::string(64, '0')};
+  }
+
+  // Read file content in chunks and compute SHA256
+  SHA256_CTX sha256_ctx;
+  SHA256_Init(&sha256_ctx);
+
+  const size_t buffer_size = 8192;
+  char buffer[buffer_size];
+
+  while (file.read(buffer, buffer_size)) {
+    SHA256_Update(&sha256_ctx, buffer, file.gcount());
+  }
+  // Handle any remaining bytes
+  if (file.gcount() > 0) {
+    SHA256_Update(&sha256_ctx, buffer, file.gcount());
+  }
+
+  // Get the final hash
+  unsigned char hash[SHA256_DIGEST_LENGTH];
+  SHA256_Final(hash, &sha256_ctx);
+
+  // Convert to hex string (32 bytes * 2 = 64 hex chars)
+  std::stringstream ss;
+  for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+    ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(hash[i]);
+  }
+
+  return Hash{ss.str()};
 }
 
 DiffAndTree detect_changed_file_paths(

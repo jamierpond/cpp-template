@@ -28,8 +28,12 @@ if(USE_MSAN)
     set(CMAKE_BUILD_TYPE Debug)
 endif()
 
+# Find OpenSSL for cryptographic hashing
+find_package(OpenSSL REQUIRED)
+
 # Main executable
 add_executable(${PROJECT_NAME} main.cpp)
+target_link_libraries(${PROJECT_NAME} PRIVATE OpenSSL::Crypto)
 
 # Fetch and configure Catch2
 Include(FetchContent)
