@@ -115,7 +115,6 @@ Hash get_content_hash(const std::filesystem::path& p) {
   if (to_hash.size() > 64) to_hash = to_hash.substr(0, 64);
   if (to_hash.size() < 64) to_hash.append(64 - to_hash.size(), '0');
   return Hash{to_hash};
-
 }
 
 DiffAndTree detect_changed_file_paths(
@@ -126,7 +125,8 @@ DiffAndTree detect_changed_file_paths(
 
 int main() {
   namespace fs = std::filesystem;
-  const fs::path root = fs::current_path();
+  const fs::path root = "/Users/jamiepond/Downloads/drluke";
+  fs::current_path(root);
 
   // Setup: create temp dirs and files
   fs::create_directories("temp");
